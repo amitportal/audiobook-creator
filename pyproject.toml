@@ -1,0 +1,31 @@
+[project]
+name = "audiobook-creator"
+version = "0.1.0"
+description = "Convert Markdown books to audiobooks using Hugging Face TTS models"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "markdown>=3.10",
+    "pydub>=0.25.1",
+    "soundfile>=0.13.1",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "transformers>=4.30.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.65.0",
+    "accelerate>=1.12.0",
+    "kokoro>=0.9.4",
+    "onnxruntime>=1.23.2",
+    "edge-tts>=6.1.7",
+    "scipy>=1.16.3",
+    "sentencepiece>=0.2.1",
+    "ffmpeg>=1.4",
+    "sentence-transformers>=5.1.2",
+]
+
+[tool.uv]
+extra-index-url = ["https://download.pytorch.org/whl/cu124"]
+
+[project.scripts]
+audiobook-creator = "audiobook_creator.cli:main"
