@@ -63,6 +63,7 @@ class MarkdownParser:
         r'^#\s+Chapter\s+(\d+)\s*(.*)$',  # # Chapter 1 Title
         r'^#\s+(Preface|Acknowledgements|Epilogue|Foreword|Introduction|Conclusions?)$',
         r'^#\s+(Endorsements?|Contents?)$',
+        r'^#\s+(.*)$',  # Generic # Title
     ]
     
     def __init__(self, filepath: Path):
@@ -95,7 +96,7 @@ class MarkdownParser:
                 
                 # Start new chapter
                 current_chapter_info = chapter_info
-                current_chapter_lines = [line]  # Include heading
+                current_chapter_lines = []  # Don't include heading line
             elif current_chapter_info:
                 current_chapter_lines.append(line)
         

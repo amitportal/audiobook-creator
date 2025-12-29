@@ -124,6 +124,12 @@ TTS Model:
         help='Do not narrate chapter headings'
     )
     
+    parser.add_argument(
+        '--ffmpeg-path',
+        type=str,
+        help='Path to ffmpeg executable (optional, if not in PATH)'
+    )
+    
     args = parser.parse_args()
     
     # Setup logging
@@ -165,7 +171,8 @@ TTS Model:
             chunker=chunker,
             output_dir=Path(args.output),
             audio_format=args.format,
-            use_dynamic_pauses=not args.no_dynamic_pauses
+            use_dynamic_pauses=not args.no_dynamic_pauses,
+            ffmpeg_path=args.ffmpeg_path
         )
         
         # Generate audiobook

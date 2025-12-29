@@ -5,6 +5,8 @@ Orchestrates chapter-wise audio generation and concatenation.
 """
 
 import logging
+import os
+import shutil
 from pathlib import Path
 from typing import List, Optional
 import numpy as np
@@ -36,7 +38,8 @@ class AudiobookGenerator:
         chunker: TextChunker,
         output_dir: Path = Path("./output"),
         audio_format: str = "mp3",
-        use_dynamic_pauses: bool = True
+        use_dynamic_pauses: bool = True,
+        ffmpeg_path: Optional[str] = None
     ):
         """
         Initialize audiobook generator.
@@ -47,12 +50,52 @@ class AudiobookGenerator:
             output_dir: Output directory for audio files
             audio_format: Audio format (wav or mp3)
             use_dynamic_pauses: Use semantic similarity for dynamic pauses
+            ffmpeg_path: Optional path to ffmpeg executable
         """
         self.tts_engine = tts_engine
         self.chunker = chunker
         self.output_dir = Path(output_dir)
         self.audio_format = audio_format
         self.use_dynamic_pauses = use_dynamic_pauses
+        
+        # Configure ffmpeg path
+        if PYDUB_AVAILABLE:
+            final_ffmpeg_path = None
+            
+            # 1. Check provided path
+            if ffmpeg_path:
+                logger.info(f"Using provided ffmpeg path: {ffmpeg_path}")
+                final_ffmpeg_path = ffmpeg_path
+            
+            # 2. Check system PATH
+            elif shutil.which("ffmpeg"):
+                final_ffmpeg_path = "ffmpeg"
+            
+            # 3. Auto-detect
+            else:
+                detected_path = self._find_ffmpeg()
+                if detected_path:
+                    logger.info(f"Auto-detected ffmpeg at: {detected_path}")
+                    final_ffmpeg_path = detected_path
+                    
+                    # Add to session PATH so subprocesses can find it
+                    ffmpeg_dir = str(Path(detected_path).parent)
+                    if ffmpeg_dir not in os.environ["PATH"]:
+                        logger.info(f"Adding {ffmpeg_dir} to session PATH")
+                        os.environ["PATH"] += os.pathsep + ffmpeg_dir
+            
+            # Apply configuration or warn
+            if final_ffmpeg_path:
+                if final_ffmpeg_path != "ffmpeg":
+                    AudioSegment.converter = final_ffmpeg_path
+            else:
+                logger.warning("="*60)
+                logger.warning("CRITICAL: FFmpeg not found!")
+                logger.warning("Audiobook generation (MP3) requires FFmpeg.")
+                logger.warning("Please install it using WinGet:")
+                logger.warning("  winget install Gyan.FFmpeg")
+                logger.warning("Or download from: https://ffmpeg.org/download.html")
+                logger.warning("="*60)
         
         # Initialize dynamic pause calculator if enabled
         if use_dynamic_pauses:
@@ -134,7 +177,9 @@ class AudiobookGenerator:
             # Add pause between chunks (except after last chunk)
             if i < len(chunks) - 1:
                 # Calculate pause duration
-                if self.use_dynamic_pauses and self.pause_calculator:
+                if chunk.is_heading:
+                    pause_duration = 1.5  # Longer pause after heading
+                elif self.use_dynamic_pauses and self.pause_calculator:
                     try:
                         pause_duration = self.pause_calculator.calculate_pause(
                             chunk.text,
@@ -151,8 +196,6 @@ class AudiobookGenerator:
                 pause_samples = int(self.tts_engine.sample_rate * pause_duration)
                 pause = np.zeros(pause_samples, dtype=np.float32)
                 chunk_audios.append(pause)
-        
-        # Concatenate all audios
         chapter_audio = np.concatenate(chunk_audios)
         
         # Generate filename
@@ -248,3 +291,58 @@ class AudiobookGenerator:
                 
                 # Remove temp file
                 temp_wav.unlink()
+
+    def _find_ffmpeg(self) -> Optional[str]:
+        """Try to find ffmpeg executable in common Windows locations."""
+        # 1. Check if already in PATH
+        if shutil.which("ffmpeg"):
+            return None
+        
+        # 2. Define common search paths
+        search_dirs = []
+        
+        # WinGet path (common for modern Windows users)
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            winget_path = Path(local_app_data) / "Microsoft" / "WinGet" / "Packages"
+            if winget_path.exists():
+                search_dirs.append(winget_path)
+                
+        # Program Files
+        prog_files = os.environ.get("PROGRAMFILES")
+        if prog_files:
+            search_dirs.append(Path(prog_files))
+            
+        prog_files_x86 = os.environ.get("PROGRAMFILES(X86)")
+        if prog_files_x86:
+            search_dirs.append(Path(prog_files_x86))
+            
+        # User Profile
+        user_profile = os.environ.get("USERPROFILE")
+        if user_profile:
+            search_dirs.append(Path(user_profile))
+
+        # 3. Search for ffmpeg.exe in these directories
+        for base_dir in search_dirs:
+            # Check common subfolders
+            for sub in ["ffmpeg/bin", "bin", "ffmpeg"]:
+                test_path = base_dir / sub / "ffmpeg.exe"
+                if test_path.exists():
+                    return str(test_path)
+            
+            # Special case for WinGet: it has nested folders
+            if "WinGet" in str(base_dir):
+                try:
+                    # Shallow search in package directories
+                    for pkg_dir in base_dir.iterdir():
+                        if "ffmpeg" in pkg_dir.name.lower():
+                            # Look for bin/ffmpeg.exe or ffmpeg.exe
+                            for sub in ["", "bin"]:
+                                # We use a simple check instead of rglob for speed
+                                # but rglob is safer for nested structures
+                                for exe_path in pkg_dir.rglob("ffmpeg.exe"):
+                                    return str(exe_path)
+                except Exception:
+                    pass
+                    
+        return None
