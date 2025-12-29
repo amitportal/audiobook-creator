@@ -7,6 +7,7 @@ Orchestrates chapter-wise audio generation and concatenation.
 import logging
 import os
 import shutil
+import io
 from pathlib import Path
 from typing import List, Optional
 import numpy as np
@@ -281,16 +282,14 @@ class AudiobookGenerator:
                 output_path = output_path.with_suffix('.wav')
                 sf.write(output_path, audio, self.tts_engine.sample_rate)
             else:
-                # Save as WAV first, then convert
-                temp_wav = output_path.with_suffix('.wav')
-                sf.write(temp_wav, audio, self.tts_engine.sample_rate)
+                # Use in-memory buffer for WAV to avoid disk I/O
+                wav_buffer = io.BytesIO()
+                sf.write(wav_buffer, audio, self.tts_engine.sample_rate, format='WAV')
+                wav_buffer.seek(0)
                 
                 # Convert to MP3
-                audio_segment = AudioSegment.from_wav(str(temp_wav))
+                audio_segment = AudioSegment.from_wav(wav_buffer)
                 audio_segment.export(str(output_path), format="mp3")
-                
-                # Remove temp file
-                temp_wav.unlink()
 
     def _find_ffmpeg(self) -> Optional[str]:
         """Try to find ffmpeg executable in common Windows locations."""
