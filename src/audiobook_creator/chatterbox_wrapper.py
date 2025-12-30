@@ -72,13 +72,9 @@ class ChatterboxONNX:
             return 'cpu', 'quantized'
     
     def _get_providers(self):
-        """Get ONNX execution providers based on hardware"""
-        if self.device == 'cuda':
-            return ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        elif self.device == 'dml':
-            return ['DmlExecutionProvider', 'CPUExecutionProvider']
-        else:
-            return ['CPUExecutionProvider']
+        """Get ONNX execution providers based on detected hardware"""
+        from .hardware import get_onnx_providers
+        return get_onnx_providers()
     
     def _load_model(self, model_name: str):
         """Load an ONNX model with appropriate quantization"""

@@ -1,194 +1,97 @@
 # Audiobook Creator
 
-**Version 1.1.0** - Convert Markdown books into high-quality MP3 audiobooks using multiple TTS models (Supertonic, Kokoro, Chatterbox).
+**Version 1.2.0** - Convert Markdown books into high-quality MP3 audiobooks with state-of-the-art TTS models and hardware acceleration.
+
+[![Software License](https://img.shields.io/badge/license-AGPL_V3-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Hardware Support](https://img.shields.io/badge/hardware-NVIDIA_CUDA_|_Intel_NPU_|_CPU-green.svg)](#hardware-acceleration)
 
 ## Features
-- **Modular TTS Architecture**: Support for multiple TTS backends:
-- **Supertone Supertonic** (Default): Ultra-fast ONNX-based models.
-- **Kokoro**: Lightweight, high-quality open-weight model.
-- **ResembleAI Chatterbox**: Expressive model with paralinguistic tag support.
-- **Smart Chapter Detection**: Automatically detects chapters from Markdown headings (including generic H1).
-- **MP3 Output**: Professional MP3 audiobooks with automatic conversion.
-- **Automatic FFmpeg Detection**: Robust search for FFmpeg on Windows (WinGet, Program Files, etc.).
-- **Performance Optimized**: In-memory audio processing (no intermediate WAV files).
-- **Smart Caching**: Skip re-generating chapters that already have an output file with `--use-cache`.
-- **Dynamic Pauses**: Semantic similarity-based pauses between text chunks for natural flow.
-- **Clear Progress**: Real-time console output "yelling" the current chapter being processed.
-- **Configurable Voice Styles**: Choose different voice styles depending on the model.
-- **Modern GUI**: Graphical interface with dark mode, file pickers, and real-time logs.
-- **One-Click Deployment**: Double-click PowerShell script handles everything.
 
-## Quick Start
+- **Multi-Model Support**:
+  - **Supertone Supertonic**: Ultra-fast ONNX-based high-fidelity models.
+  - **Soprano-80M**: Lightweight LLM-based TTS with Vocos decoder.
+  - **MiraTTS**: High-quality 48kHz audio tokens with NCodec.
+  - **Kokoro**: High-quality open-weight model for expressive speech.
+  - **Chatterbox**: Paralinguistic support for natural sounding books.
+- **Hardware Acceleration**: Automatic detection of **NVIDIA GPUs (CUDA)**, **Intel NPUs/GPUs (OpenVINO)**, and **DirectML**.
+- **Smart Parsing**: Automatically handles Markdown structures, headers, and semantic pauses.
+- **Dynamic Pauses**: Uses semantic similarity to inject natural breathing room between sections.
+- **One-Click Setup**: Professional PowerShell script handles all dependencies, models, and FFmpeg automatically.
+- **Modern GUI**: dark-mode interface with real-time processing logs.
 
-### Easiest Method: One-Click Script (Windows)
+## Quick Start (Windows)
 
-**Requirements:** Just Python 3.12+ installed on your PC
+1. **Clone/Download** this repository.
+2. **Right-click** `run_audiobook_creator.ps1` and select **"Run with PowerShell"**.
+3. **Wait** for the automatic setup (Installs UV, FFmpeg, and Models).
+4. **The GUI launches automatically!**
 
-**Steps:**
-1. Download or clone this repository
-2. Right-click `run_audiobook_creator.ps1`
-3. Select "Run with PowerShell"
-4. Wait for automatic setup (first run only)
-5. GUI launches automatically!
+## Hardware Acceleration
 
-The script automatically:
-- Checks Python version
-- Installs `uv` package manager
-- Installs all dependencies
-- Installs FFmpeg (if not present)
-- Downloads Supertonic models (~500MB, one-time)
-- Launches the GUI
+Audiobook Creator automatically optimizes itself for your hardware:
 
-**Note:** If you encounter a security warning:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+| Hardware Detect | Method Used | Benefit |
+|-----------------|-------------|---------|
+| **NVIDIA GPU** | CUDA 12.x | Maximum performance for all models. |
+| **Intel NPU** | OpenVINO | Efficient background processing on modern laptops. |
+| **Intel GPU** | OpenVINO | High-performance inference. |
+| **Old GPU/AMD** | DirectML | Basic hardware acceleration. |
+| **Generic CPU** | AVX/AVX2 | Optimized fallback for all systems. |
 
----
+## Usage
 
-### Alternative: Manual GUI Setup
+### GUI
+Simply select your input file, choose a model, and click "Start".
 
-For users who prefer manual control or are using Linux/Mac:
-
-```bash
-# Prerequisites: Python 3.12+ and git
-
-# Step 1: Install uv
-# Windows:
-winget install astral-sh.uv
-# Linux/Mac:
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Step 2: Clone and setup
-git clone https://github.com/amitportal/audiobook-creator.git
-cd audiobook-creator
-uv sync
-uv pip install -e .
-3. **Model Settings**: Select TTS model and voice (`M1`-`M3` for male, `F1`-`F3` for female)
-4. **Options**: Enable cache, concatenated output, or dynamic pauses
-5. **Start**: Click "Start Generation" and monitor real-time logs!
-
----
-
-### Command Line Interface
-
-For automation or advanced users:
-
+### Command Line
 ```bash
 # Basic usage
-uv run audiobook -i book.md -o ./audiobook
+uv run audiobook -i book.md -m soprano
 
-# With specific model
-uv run audiobook -i book.md -m kokoro -v af
-
-# Use caching
-uv run audiobook -i book.md --use-cache
-
-# Create single file
-uv run audiobook -i book.md --concat
+# Specify voice and hardware
+uv run audiobook -i book.md -m supertonic -v M2 --device cuda
 ```
 
-## CLI Options
+## Supported Models
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--input`, `-i` | Input Markdown file (required) | - |
-| `--output`, `-o` | Output directory | `./output` |
-| `--model` | TTS Model (`supertonic`, `kokoro`, `chatterbox`) | `supertonic` |
-| `--voice-style` | Voice style (Model dependent) | `default` |
-| `--format`, `-f` | Audio format (`wav`, `mp3`) | `mp3` |
-| `--ffmpeg-path` | Manual path to ffmpeg executable | (Auto-detected) |
-| `--use-cache` | Skip generation for existing files | `False` |
-| `--concat` | Generate single full audiobook file | `False` |
-| `--verbose`, `-v` | Enable verbose logging | `False` |
-| `--no-dynamic-pauses` | Disable semantic similarity pauses | `False` |
+| Model | Sample Rate | Best For | Hardware |
+|-------|-------------|----------|----------|
+| **Supertonic** | 44.1 kHz | Speed & Stability | ONNX (All) |
+| **Soprano** | 32.0 kHz | Efficiency (80M params) | Torch / CUDA |
+| **MiraTTS** | 48.0 kHz | Ultra Fidelity | Torch / CUDA |
+| **Kokoro** | 24.0 kHz | Quality | Torch / CPU |
+| **Chatterbox** | 24.0 kHz | Expression | ONNX (All) |
 
-## Voice Styles
+---
 
-- **Supertonic**: `M1`-`M3` (Male), `F1`-`F3` (Female)
-- **Kokoro**: `af` (Default), `am`, `bf`, `bm`, etc.
-- **Chatterbox**: Uses model defaults
+## Technical Setup
 
-## How It Works
+### Prerequisites
+- Python 3.12+
+- FFmpeg (Auto-installed by script)
 
-1. **Parse**: Extract chapters from Markdown (supports generic H1)
-2. **Chunk**: Split text into optimal TTS chunks (model-specific limits)
-3. **Synthesize**: Generate audio using selected model
-4. **Pause**: Calculate semantic similarity for natural pauses (1.5s for headings)
-5. **Convert**: Output as MP3 using in-memory processing
+### Manual Installation
+```bash
+pip install uv
+uv sync
+uv pip install -e .
+audiobook-gui
+```
 
 ## Troubleshooting
 
-### Script Security Warning
-If Windows blocks the script:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### FFmpeg Not Found
-The script auto-installs via winget. Manual install:
-```powershell
-winget install Gyan.FFmpeg
-```
-
-### GUI Command Not Found
-Reinstall the package:
-```powershell
-uv pip install -e .
-uv run audiobook-gui
-```
-
-### Unicode Encoding Errors
-If you see `UnicodeEncodeError`:
-```powershell
-$env:PYTHONUTF8 = "1"
-```
-
-## Deployment to Other PCs
-
-**Requirements:** Python 3.12+ installed
-
-**Method 1 (Easiest):** Share the entire `audiobook-creator` folder and double-click `run_audiobook_creator.ps1`
-
-**Method 2 (Manual):** Clone repo and run:
-```powershell
-uv sync
-uv pip install -e .
-uv run audiobook-gui
-```
-
-## Project Structure
-
-```
-audiobook-creator/
-├── run_audiobook_creator.ps1  # One-click setup & launch script
-├── src/audiobook_creator/
-│   ├── parser.py              # Markdown parsing
-│   ├── chunker.py             # Text chunking
-│   ├── tts_engine.py          # Modular TTS interface
-│   ├── supertonic_wrapper.py  # Supertonic ONNX integration
-│   ├── dynamic_pause.py       # Semantic pause calculation
-│   ├── audiobook.py           # Audio generation
-│   ├── gui.py                 # Modern GUI application
-│   └── cli.py                 # Command-line interface
-├── books/                      # Sample books
-├── pyproject.toml
-└── README.md
-```
+- **Security Policy**: If PowerShell scripts are blocked, run:
+  `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+- **Missing Models**: Ensure you have ~2GB free space for one-time model downloads.
+- **FFmpeg Output**: If MP3 conversion fails, ensure FFmpeg is in your system PATH.
 
 ## License
 
-GNU Affero General Public License (AGPL V3)
+This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgements
+## Credits
 
-- **Supertone** for Supertonic TTS
-- **hexgrad** for Kokoro TTS
-- **Resemble AI** for Chatterbox-Turbo
-- **Hugging Face** for model hosting
-- **ONNX Runtime** for fast CPU inference
-- **CustomTkinter** for the modern GUI
+Built with ❤️ by [Amit Kumar](https://github.com/amitportal). 
 
----
-
-**Built by Amit Kumar with ❤️**
+Contributions are welcome! Please open an issue or PR for new model integrations or hardware optimizations.

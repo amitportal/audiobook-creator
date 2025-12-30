@@ -117,7 +117,9 @@ class TTSEngine(ABC):
     @staticmethod
     def get_available_device() -> str:
         """Detect the best available hardware device."""
-        return "cpu"
+        from .hardware import select_best_device
+        type, name = select_best_device()
+        return name # Returns e.g. "cuda:0", "NPU", "cpu"
 
 
 class SupertonicEngine(TTSEngine):

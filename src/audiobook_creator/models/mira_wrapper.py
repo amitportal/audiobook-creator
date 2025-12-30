@@ -14,18 +14,21 @@ class MiraWrapper:
     """
     
     def __init__(self, device: str = None):
-        self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        from ..hardware import select_best_device
+        hw_type, hw_name = select_best_device()
+        self.device = device or hw_name
         
         # Load LLM
         logger.info(f"Loading MiraTTS on {self.device}...")
-        self.dtype = torch.bfloat16 if self.device == 'cuda' else torch.float32
+        self.dtype = torch.bfloat16 if "cuda" in self.device else torch.float32
         
         model_id = "YatharthS/MiraTTS"
+        model_device = "auto" if "cuda" in self.device else self.device
         
         self.model = AutoModelForCausalLM.from_pretrained(
             model_id,
             dtype=self.dtype,
-            device_map=self.device,
+            device_map=model_device,
             trust_remote_code=True
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)

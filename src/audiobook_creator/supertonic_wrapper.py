@@ -133,8 +133,9 @@ class SupertonicTTS:
         
         # Load ONNX models
         logger.info("Loading Supertonic ONNX models...")
+        from .hardware import get_onnx_providers
         opts = ort.SessionOptions()
-        providers = ["CPUExecutionProvider"]
+        providers = get_onnx_providers()
         
         self.dp_ort = ort.InferenceSession(
             str(self.model_dir / "duration_predictor.onnx"),

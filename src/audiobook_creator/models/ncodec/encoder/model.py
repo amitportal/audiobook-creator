@@ -64,8 +64,10 @@ class AudioEncoder:
     def __init__(self, decoder_paths="YaTharThShaRma999/pretrained_tts_tokenizers"):
 
         ## uses torch/onnx as seen fit, for some things torch is faster, others torch is faster
-        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-        self.dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+        from ....hardware import select_best_device, get_onnx_providers
+        hw_type, hw_name = select_best_device()
+        self.device = hw_name
+        self.dtype = torch.bfloat16 if "cuda" in self.device else torch.float32
         
         self.decoder_paths = decoder_paths
         self.feature_extractor = None
@@ -73,10 +75,7 @@ class AudioEncoder:
         self.q_encoder = None
         
         sess_options = ort.SessionOptions()
-        if self.device == 'cuda:0':
-            providers = [("CUDAExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"]
-        else:
-            providers = ["CPUExecutionProvider"]
+        providers = get_onnx_providers(hw_type)
         
         self.s_encoder = ort.InferenceSession(f"{decoder_paths}/s_encoder.onnx", sess_options, providers=providers)
         self.mel_transformer = get_mel_transformer()
@@ -93,8 +92,10 @@ class AudioEncoder:
 
     def _ensure_q_encoder(self):
         if self.q_encoder is None:
+            from ....hardware import select_best_device, get_onnx_providers
+            hw_type, _ = select_best_device()
             sess_options = ort.SessionOptions()
-            providers = [("CUDAExecutionProvider", {"device_id": 0}), "CPUExecutionProvider"] if self.device == 'cuda:0' else ["CPUExecutionProvider"]
+            providers = get_onnx_providers(hw_type)
             self.q_encoder = ort.InferenceSession(f"{self.decoder_paths}/q_encoder.onnx", sess_options, providers=providers)
 
     def extract_wav2vec2_features(self, wavs: torch.Tensor) -> torch.Tensor:

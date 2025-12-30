@@ -16,16 +16,21 @@ class SopranoWrapper:
     """
     
     def __init__(self, device: str = None):
-        self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        from ..hardware import select_best_device
+        hw_type, hw_name = select_best_device()
+        self.device = device or hw_name
         
         # Load LLM
         logger.info(f"Loading Soprano-80M on {self.device}...")
-        self.dtype = torch.bfloat16 if self.device == 'cuda' else torch.float32
+        self.dtype = torch.bfloat16 if "cuda" in self.device else torch.float32
         
+        # For multi-GPU, if device is "cuda:0" or similar, use "auto" to leverage all?
+        # User asked to use "best/higher one, or all". device_map="auto" uses all.
+        model_device = "auto" if "cuda" in self.device else self.device
         self.model = AutoModelForCausalLM.from_pretrained(
             'ekwek/Soprano-80M',
             dtype=self.dtype,
-            device_map=self.device,
+            device_map=model_device,
             trust_remote_code=True 
         )
         self.tokenizer = AutoTokenizer.from_pretrained('ekwek/Soprano-80M')
