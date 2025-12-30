@@ -12,6 +12,7 @@ wheels/
 # Documentation
 *.md
 !README.md
+!USAGE-GUIDE.md
 
 # Ignore directories
 /books/
