@@ -11,7 +11,7 @@ Audiobook Creator works best with structured Markdown.
 ### Markdown Best Practices
 *   **Use Headers**: Use `#` (H1) for Chapter titles. The parser uses these to split the book into logical audio files.
 *   **Clean Text**: Avoid complex tables or raw code blocks as they don't always translate well to speech.
-*   **Semantic Indicators**: The "Dynamic Pauses" feature looks for paragraph breaks and punctuation to inject natural timing.
+*   **Semantic Indicators**: The "Dynamic Pauses" feature looks for sentences semantic differences, paragraph breaks, and punctuation to inject natural timing.
 
 ---
 
@@ -47,14 +47,14 @@ uv run audiobook -i my_book.md -o ./finished -m miratts --concat --device cuda
 ### Advanced CLI Flags
 *   `--use-cache`: Skip generating chapters that haven't changed.
 *   `--no-dynamic-pauses`: If you prefer a constant speed without semantic pauses.
-*   `--verbose`: See exactly what the AI is "thinking" during generation.
+*   `--verbose`: See exactly what the models are "thinking" during generation.
 
 ---
 
 ## 🚀 4. Hardware Tuning
 
 ### NVIDIA Users (CUDA)
-*   **Performance**: MiraTTS and Soprano will be significantly faster.
+*   **Performance**: Supertonic and Soprano will be significantly faster.
 *   **Recommendation**: Always use `--device cuda` if you have 8GB+ VRAM.
 
 ### Intel Users (OpenVINO / NPU)
@@ -70,7 +70,7 @@ uv run audiobook -i my_book.md -o ./finished -m miratts --concat --device cuda
 3.  **Voice Matching**: 
     *   Use **Supertonic** for Non-Fiction (Clear, steady).
     *   Use **Chatterbox** or **MiraTTS** for Fiction (More emotion and dynamic range).
-4.  **Audio Fixes**: If a sentence sounds "clunky", try adding a comma or splitting it into two. AI models often react better to standard punctuation.
+4.  **Audio Fixes**: If a sentence sounds "clunky", try adding a comma or splitting it into two. Transformer based models often react better to standard punctuation.
 
 ---
 
@@ -84,4 +84,6 @@ uv run audiobook -i my_book.md -o ./finished -m miratts --concat --device cuda
 
 ---
 
-*Built with ❤️ for the Open Source Community.*
+*Built with ❤️ for the Listeners, Learners, and Readers. Please upload good audiobooks conversions to Librivox or other open community projects. If you find this useful, please consider supporting me on [GitHub Sponsors](https://github.com/sponsors/amitportal).*
+
+*Contributions are welcome! Please open an issue or PR for new model integrations or hardware optimizations.*
