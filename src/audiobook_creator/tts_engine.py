@@ -218,52 +218,125 @@ class KokoroEngine(TTSEngine):
 
 
 class ChatterboxEngine(TTSEngine):
-    """ResembleAI Chatterbox Engine (Transformers)."""
+    """Chatterbox TTS - ONNX based, hardware optimized"""
     
     def __init__(self, device: str = "cpu", voice_style: str = "default"):
         super().__init__(device, voice_style)
         self.sample_rate = 24000
         self.max_text_length = 500  # Chatterbox limit
-        logger.info("Initializing Chatterbox TTS engine")
-        logger.info("Description: ResembleAI Chatterbox-Turbo - Expressive, 350M params")
+        logger.info("Initializing Chatterbox TTS engine (ONNX)")
+        logger.info("Description: ResembleAI Chatterbox-Turbo - Expressive, hardware-optimized")
 
     def load_model(self) -> None:
         if self.model is not None:
             return
             
-        logger.info("Loading Chatterbox-Turbo model...")
+        logger.info("Loading Chatterbox ONNX models...")
         try:
-            from transformers import AutoModelForTextToSpeech, AutoTokenizer
+            from .chatterbox_wrapper import ChatterboxONNX
             
-            self.tokenizer = AutoTokenizer.from_pretrained("ResembleAI/chatterbox-turbo")
-            self.model = AutoModelForTextToSpeech.from_pretrained("ResembleAI/chatterbox-turbo")
+            model_dir = Path.home() / ".cache" / "huggingface" / "chatterbox_models" / "onnx"
             
-            if self.device == "cuda":
-                self.model = self.model.to("cuda")
-                
+            if not model_dir.exists():
+                raise FileNotFoundError(
+                    f"Chatterbox models not found at {model_dir}\n"
+                    f"Download from: https://huggingface.co/ResembleAI/chatterbox-turbo-ONNX/tree/main/onnx"
+                )
+            
+            self.model = ChatterboxONNX(str(model_dir))
+            self.model.load_models()
+            self.sample_rate = self.model.sample_rate
+            
             logger.info("[OK] Chatterbox loaded successfully")
-        except ImportError:
-            logger.error("Transformers package not found.")
-            raise ImportError("Transformers package not found")
+        except ImportError as e:
+            logger.error(f"Chatterbox wrapper not found: {e}")
+            raise ImportError("Chatterbox ONNX wrapper not available")
         except Exception as e:
             logger.error(f"Failed to load Chatterbox: {e}")
             raise RuntimeError(f"Failed to load Chatterbox TTS model: {e}")
 
     def _synthesize_single(self, text: str) -> np.ndarray:
         try:
-            import torch
-            
-            inputs = self.tokenizer(text, return_tensors="pt")
-            if self.device == "cuda":
-                inputs = inputs.to("cuda")
-                
-            with torch.no_grad():
-                output = self.model.generate(**inputs)
-                
-            return output.audio[0].cpu().numpy()
+            return self.model.synthesize(text, speed=1.0)
         except Exception as e:
             logger.error(f"Failed to synthesize speech with Chatterbox: {e}")
             raise RuntimeError(f"Chatterbox synthesis failed: {e}")
+
+
+
+class SopranoEngine(TTSEngine):
+    """Soprano-80M TTS Engine."""
+    
+    def __init__(self, device: str = "cpu", voice_style: str = "default"):
+        super().__init__(device, voice_style)
+        self.sample_rate = 32000
+        self.max_text_length = 400
+        logger.info("Initializing Soprano TTS engine")
+        logger.info("Description: Soprano-80M - Ultra-lightweight with Vocos decoder")
+
+    def load_model(self) -> None:
+        if self.model is not None:
+            return
+        
+        logger.info("Loading Soprano-80M...")
+        try:
+            from .models.soprano_wrapper import SopranoWrapper
+            self.model = SopranoWrapper(device=self.device)
+            # Soprano sample rate is 32000
+            self.sample_rate = 32000
+            logger.info("[OK] Soprano loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load Soprano: {e}")
+            raise RuntimeError(f"Failed to load Soprano TTS model: {e}")
+
+    def _synthesize_single(self, text: str) -> np.ndarray:
+        try:
+            return self.model.infer(text)
+        except Exception as e:
+            logger.error(f"Soprano synthesis failed: {e}")
+            raise RuntimeError(f"Soprano synthesis failed: {e}")
+
+
+class MiraEngine(TTSEngine):
+    """MiraTTS Engine."""
+    
+    def __init__(self, device: str = "cpu", voice_style: str = "default"):
+        super().__init__(device, voice_style)
+        self.sample_rate = 48000
+        self.max_text_length = 400
+        logger.info("Initializing MiraTTS engine")
+        logger.info("Description: MiraTTS - High quality 48kHz, NCodec based")
+
+    def load_model(self) -> None:
+        if self.model is not None:
+            return
+        
+        logger.info("Loading MiraTTS...")
+        try:
+            from .models.mira_wrapper import MiraWrapper
+            # Basic device check, ignoring device arg if gpu available
+            device = 'cuda' if self.device == 'cuda' or (self.device == 'auto' and torch.cuda.is_available()) else 'cpu'
+            self.model = MiraWrapper(device=device)
+            self.sample_rate = 48000
+            logger.info("[OK] MiraTTS loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load MiraTTS: {e}")
+            raise RuntimeError(f"Failed to load MiraTTS model: {e}")
+
+    def _synthesize_single(self, text: str) -> np.ndarray:
+        try:
+            # TODO: Add voice cloning support via voice_style (path to audio)
+            ref_audio = None
+            if self.voice_style and self.voice_style != "default":
+                 # If voice_style is a path, use it
+                 p = Path(self.voice_style)
+                 if p.exists():
+                     ref_audio = str(p)
+            
+            return self.model.infer(text, ref_audio_path=ref_audio)
+        except Exception as e:
+            logger.error(f"MiraTTS synthesis failed: {e}")
+            raise RuntimeError(f"MiraTTS synthesis failed: {e}")
 
 
 def get_tts_engine(model_name: str, device: str = "cpu", voice_style: str = "default") -> TTSEngine:
@@ -271,17 +344,21 @@ def get_tts_engine(model_name: str, device: str = "cpu", voice_style: str = "def
     model_name = model_name.lower()
     
     if model_name == "supertonic":
-        # Map 'default' to 'M1' for Supertonic if needed
         style = "M1" if voice_style == "default" else voice_style
         return SupertonicEngine(device, style)
     
     elif model_name == "kokoro":
-        # Default style for Kokoro is 'af' (American Female)
         style = "af" if voice_style == "default" else voice_style
         return KokoroEngine(device, style)
         
     elif model_name == "chatterbox":
         return ChatterboxEngine(device, voice_style)
+        
+    elif model_name == "soprano":
+        return SopranoEngine(device, voice_style)
+        
+    elif model_name == "miratts":
+        return MiraEngine(device, voice_style)
         
     else:
         raise ValueError(f"Unknown TTS model: {model_name}")

@@ -156,7 +156,11 @@ TTS Model:
     logger.info(f"Format: {args.format}")
     
     # Validate input file
-    input_file = Path(args.input)
+    # Sanitize paths (remove trailing quotes/whitespace common in Windows CLI)
+    input_path = args.input.strip().strip('"').strip("'")
+    output_path = args.output.strip().strip('"').strip("'")
+    
+    input_file = Path(input_path)
     if not input_file.exists():
         logger.error(f"Input file not found: {input_file}")
         sys.exit(1)
@@ -186,7 +190,7 @@ TTS Model:
         generator = AudiobookGenerator(
             tts_engine=tts_engine,
             chunker=chunker,
-            output_dir=Path(args.output),
+            output_dir=Path(output_path),
             audio_format=args.format,
             use_dynamic_pauses=not args.no_dynamic_pauses,
             ffmpeg_path=args.ffmpeg_path,
