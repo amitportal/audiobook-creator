@@ -51,19 +51,19 @@ These models are automatically downloaded via the `transformers` or `kokoro` lib
 
 ```bash
 # Generate audiobook (Default: Supertonic, voice M1)
-audiobook-creator --input book.md --output ./audiobook
+uv run python -m audiobook-creator --input book.md --output ./audiobook
 
 # Use Kokoro model
-audiobook-creator --input book.md --model kokoro --voice-style af
+uv run python -m audiobook-creator --input book.md --model kokoro --voice-style af
 
 # Use Chatterbox model
-audiobook-creator --input book.md --model chatterbox
+uv run python -m audiobook-creator --input book.md --model chatterbox
 
 # Use caching to skip existing chapters
-audiobook-creator --input book.md --use-cache
+uv run python -m audiobook-creator --input book.md --use-cache
 
 # Create single concatenated file
-audiobook-creator --input book.md --concat
+uv run python -m audiobook-creator --input book.md --concat
 ```
 
 ## CLI Options
