@@ -16,10 +16,12 @@ wheels/
 # Ignore directories
 /books/
 /audiobooks/
+/output/
 
 # Keep specific sample files
 !/books/Preface.md
 !/audiobooks/*/Preface.mp3
+
 
 # Dev files
 *.log
