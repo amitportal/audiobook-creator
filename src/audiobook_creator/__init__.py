@@ -4,7 +4,7 @@ Audiobook Creator Package
 Convert Markdown books to audiobooks using Supertone Supertonic TTS.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from .parser import MarkdownParser, Chapter
 from .chunker import TextChunker

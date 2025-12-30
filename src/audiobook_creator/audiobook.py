@@ -40,7 +40,8 @@ class AudiobookGenerator:
         output_dir: Path = Path("./output"),
         audio_format: str = "mp3",
         use_dynamic_pauses: bool = True,
-        ffmpeg_path: Optional[str] = None
+        ffmpeg_path: Optional[str] = None,
+        use_cache: bool = False
     ):
         """
         Initialize audiobook generator.
@@ -52,12 +53,14 @@ class AudiobookGenerator:
             audio_format: Audio format (wav or mp3)
             use_dynamic_pauses: Use semantic similarity for dynamic pauses
             ffmpeg_path: Optional path to ffmpeg executable
+            use_cache: Skip generation for existing files
         """
         self.tts_engine = tts_engine
         self.chunker = chunker
         self.output_dir = Path(output_dir)
         self.audio_format = audio_format
         self.use_dynamic_pauses = use_dynamic_pauses
+        self.use_cache = use_cache
         
         # Configure ffmpeg path
         if PYDUB_AVAILABLE:
@@ -139,6 +142,7 @@ class AudiobookGenerator:
         chapter_files = []
         
         for i, chapter in enumerate(tqdm(chapters, desc="Generating chapters")):
+            tqdm.write(f"\n# Converting Chapter: {chapter.title}")
             logger.info(f"Processing chapter {i+1}/{len(chapters)}: {chapter.title}")
             
             chapter_file = self.generate_chapter_audio(chapter)
@@ -163,6 +167,15 @@ class AudiobookGenerator:
         Returns:
             Path to generated audio file
         """
+        # Generate filename
+        filename = self._get_chapter_filename(chapter)
+        output_path = self.output_dir / filename
+        
+        # Check cache
+        if self.use_cache and output_path.exists():
+            logger.info(f"Skipping chapter '{chapter.title}' (cache hit: {output_path.name})")
+            return output_path
+            
         # Chunk the chapter
         chunks = self.chunker.chunk_chapter(chapter)
         

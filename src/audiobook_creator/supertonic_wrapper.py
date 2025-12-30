@@ -183,96 +183,10 @@ class SupertonicTTS:
         speed: float = 1.05
     ) -> np.ndarray:
         """
-        Synthesize speech from text
+        Synthesize speech from text (single chunk)
         
         Args:
             text: Input text
-            total_steps: Number of denoising steps (default: 5)
-            speed: Speech speed (higher = faster, default: 1.05)
-            
-        Returns:
-            Audio waveform as numpy array
-        """
-        # Limit text length to avoid ONNX dimension errors
-        # Supertonic has max text length of ~300 characters per call
-        MAX_TEXT_LENGTH = 300
-        
-        # First, detect and split on line breaks for natural pauses
-        if '\n' in text:
-            lines = text.split('\n')
-            audio_segments = []
-            
-            for line in lines:
-                line = line.strip()
-                if not line:  # Skip empty lines
-                    continue
-                
-                # Synthesize each line
-                line_audio = self.synthesize(line, total_steps, speed)  # Recursive call
-                audio_segments.append(line_audio)
-                
-                # Add 200ms pause after each line break
-                pause = np.zeros(int(self.sample_rate * 0.2), dtype=np.float32)
-                audio_segments.append(pause)
-            
-            # Remove final pause
-            if audio_segments and len(audio_segments) > 1:
-                audio_segments = audio_segments[:-1]
-            
-            # Concatenate all segments
-            if audio_segments:
-                return np.concatenate(audio_segments)
-            else:
-                return np.zeros(int(self.sample_rate * 0.1), dtype=np.float32)
-        
-        if len(text) > MAX_TEXT_LENGTH:
-            # Split into smaller chunks and concatenate audio
-            import re
-            
-            # Split by sentences while respecting max length
-            sentences = re.split(r'(?<=[.!?])\s+', text)
-            audio_segments = []
-            current_chunk = ""
-            
-            for sentence in sentences:
-                if len(current_chunk) + len(sentence) < MAX_TEXT_LENGTH:
-                    current_chunk += " " + sentence if current_chunk else sentence
-                else:
-                    # Process current chunk
-                    if current_chunk:
-                        chunk_audio = self._synthesize_single(current_chunk, total_steps, speed)
-                        audio_segments.append(chunk_audio)
-                        # Add small pause between chunks (100ms)
-                        pause = np.zeros(int(self.sample_rate * 0.1), dtype=np.float32)
-                        audio_segments.append(pause)
-                    
-                    # Start new chunk with current sentence
-                    current_chunk = sentence
-            
-            # Process remaining chunk
-            if current_chunk:
-                chunk_audio = self._synthesize_single(current_chunk, total_steps, speed)
-                audio_segments.append(chunk_audio)
-            
-            # Concatenate all segments
-            if audio_segments:
-                return np.concatenate(audio_segments)
-            else:
-                return np.zeros(int(self.sample_rate * 0.1), dtype=np.float32)
-        else:
-            return self._synthesize_single(text, total_steps, speed)
-    
-    def _synthesize_single(
-        self,
-        text: str,
-        total_steps: int = 5,
-        speed: float = 1.05
-    ) -> np.ndarray:
-        """
-        Synthesize speech from a single text chunk (internal method)
-        
-        Args:
-            text: Input text (should be < 300 chars)
             total_steps: Number of denoising steps
             speed: Speech speed
             

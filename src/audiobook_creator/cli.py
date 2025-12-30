@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import __version__
 from .audiobook import AudiobookGenerator
-from .tts_engine import TTSEngine
+from .tts_engine import get_tts_engine
 from .chunker import TextChunker
 
 
@@ -87,15 +87,28 @@ TTS Model:
     parser.add_argument(
         '--voice-style',
         type=str,
-        choices=['M1', 'M2', 'M3', 'F1', 'F2', 'F3'],
-        default='M1',
-        help='Voice style: M1-M3 (male), F1-F3 (female) (default: M1)'
+        default='default',
+        help='Voice style (depends on model). Supertonic: M1-M3, F1-F3. Kokoro: af, am, etc.'
+    )
+    
+    parser.add_argument(
+        '--model',
+        type=str,
+        choices=['supertonic', 'kokoro', 'chatterbox'],
+        default='supertonic',
+        help='TTS Model to use (default: supertonic)'
     )
     
     parser.add_argument(
         '--no-dynamic-pauses',
         action='store_true',
         help='Disable semantic similarity-based dynamic pauses'
+    )
+    
+    parser.add_argument(
+        '--use-cache',
+        action='store_true',
+        help='Skip generation for chapters that already have an output file'
     )
     
     parser.add_argument(
@@ -139,7 +152,7 @@ TTS Model:
     logger.info(f"Audiobook Creator v{__version__}")
     logger.info(f"Input file: {args.input}")
     logger.info(f"Output directory: {args.output}")
-    logger.info(f"TTS Model: Supertone Supertonic (ONNX)")
+    logger.info(f"TTS Model: {args.model}")
     logger.info(f"Format: {args.format}")
     
     # Validate input file
@@ -153,8 +166,12 @@ TTS Model:
     
     try:
         # Initialize components
-        logger.info("Initializing Supertonic TTS engine...")
-        tts_engine = TTSEngine(device="cpu", voice_style=args.voice_style)
+        logger.info(f"Initializing TTS engine ({args.model})...")
+        tts_engine = get_tts_engine(
+            model_name=args.model,
+            device="cpu",
+            voice_style=args.voice_style
+        )
         
         logger.info(f"Loading TTS model with voice style '{args.voice_style}'...")
         tts_engine.load_model()
@@ -172,7 +189,8 @@ TTS Model:
             output_dir=Path(args.output),
             audio_format=args.format,
             use_dynamic_pauses=not args.no_dynamic_pauses,
-            ffmpeg_path=args.ffmpeg_path
+            ffmpeg_path=args.ffmpeg_path,
+            use_cache=args.use_cache
         )
         
         # Generate audiobook

@@ -122,19 +122,14 @@ class TextChunker:
         Chunk a single paragraph.
         
         Uses paragraph-based chunking by default, falls back to sentence-based
-        for long paragraphs.
+        if paragraph > max_chunk_size.
         """
         # If paragraph is short enough, return as-is
         if len(paragraph) <= self.max_chunk_size:
             return [paragraph]
         
-        # If paragraph is very long, split by sentences
-        if len(paragraph) > self.long_paragraph_threshold:
-            return self._chunk_by_sentences(paragraph)
-        
-        # Otherwise, try to split at natural boundaries (but may exceed max_chunk_size)
-        # This handles moderately long paragraphs
-        return [paragraph]
+        # Otherwise, split by sentences
+        return self._chunk_by_sentences(paragraph)
     
     def _chunk_by_sentences(self, text: str) -> List[str]:
         """Split text into chunks by sentence boundaries."""
